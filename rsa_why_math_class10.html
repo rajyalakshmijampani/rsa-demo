@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSA — From HELLO to Numbers</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    background:#f6f8fc;
+    color:#182033;
+    font-family:Arial,Helvetica,sans-serif
+}
+
+.wrap{
+    max-width:1100px;
+    margin:22px auto;
+    padding:18px
+}
+
+h1{
+    text-align:center;
+    font-size:34px;
+    margin:0 0 6px
+}
+
+.subtitle{
+    text-align:center;
+    color:#59657a;
+    font-size:17px;
+    margin-bottom:22px
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px
+}
+
+.card{
+    background:#fff;
+    border:1px solid #dce3ee;
+    border-radius:18px;
+    padding:20px;
+    box-shadow:0 5px 20px #0000000a
+}
+
+.full{
+    grid-column:1/-1
+}
+
+.step{
+    font-weight:800;
+    font-size:13px;
+    letter-spacing:.06em;
+    color:#63708a;
+    text-transform:uppercase;
+    margin-bottom:10px
+}
+
+.big{
+    font-size:24px;
+    font-weight:800
+}
+
+input,textarea{
+    width:100%;
+    padding:12px;
+    border:1px solid #cbd4e1;
+    border-radius:10px;
+    font-size:17px
+}
+
+textarea{
+    min-height:70px;
+    resize:vertical
+}
+
+button{
+    border:0;
+    border-radius:10px;
+    padding:12px 18px;
+    font-weight:800;
+    font-size:16px;
+    cursor:pointer;
+    margin-top:12px
+}
+
+.encrypt{
+    background:#263b80;
+    color:white
+}
+
+.decrypt{
+    background:#15803d;
+    color:white
+}
+
+.reset{
+    background:#e9edf4;
+    color:#273148
+}
+
+.code{
+    font:13px/1.5 Consolas,monospace;
+    word-break:break-all;
+    background:#f1f4f8;
+    padding:12px;
+    border-radius:10px
+}
+
+.dark{
+    background:#101827;
+    color:#e1eaff
+}
+
+.label{
+    font-weight:700;
+    margin:10px 0 6px
+}
+
+.small{
+    font-size:14px;
+    line-height:1.5;
+    color:#5e6a7e
+}
+
+.flow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+    margin:8px 0
+}
+
+.box{
+    padding:13px 16px;
+    border:2px solid #cbd4e1;
+    border-radius:12px;
+    background:#fafbfd;
+    text-align:center;
+    font-weight:700
+}
+
+.arrow{
+    font-size:25px;
+    color:#647189
+}
+
+.highlight{
+    font-size:18px;
+    font-weight:800
+}
+
+.math{
+    font:18px Consolas,monospace;
+    background:#f3f5f9;
+    padding:14px;
+    border-radius:10px;
+    text-align:center
+}
+
+.ok{
+    color:#15803d;
+    font-weight:800
+}
+
+.warning{
+    background:#fff8e6;
+    border:1px solid #f1d27b;
+    padding:13px;
+    border-radius:10px;
+    color:#634d12;
+    font-size:14px;
+    line-height:1.5
+}
+
+@media(max-width:780px){
+    .grid{
+        grid-template-columns:1fr
+    }
+
+    .full{
+        grid-column:auto
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<h1>Encryption - Decryption</h1>
+
+<div class="subtitle">
+A visual, classroom-friendly look at the mathematics behind public-key encryption
+</div>
+
+
+<div class="grid">
+
+
+<!-- MESSAGE -->
+
+<section class="card">
+
+<div class="step">
+1 · Start with a message
+</div>
+
+<textarea id="msg">Hello</textarea>
+
+<div class="label">
+UTF-8 byte values
+</div>
+
+<div class="code" id="bytes">
+</div>
+
+</section>
+
+
+
+<!-- PUBLIC KEY -->
+
+<section class="card">
+
+<div class="step">
+2 · The public key
+</div>
+
+<div class="label">
+Public modulus
+</div>
+
+<div class="code" id="n">
+Generating…
+</div>
+
+</section>
+
+
+
+<!-- ENCRYPT -->
+
+<section class="card">
+
+<div class="step">
+3 · Try it
+</div>
+
+<button class="encrypt" onclick="encryptMsg()">
+🔒 ENCRYPT
+</button>
+
+<div class="label">
+Ciphertext — a huge number
+</div>
+
+<div class="code dark" id="cipher">
+Click ENCRYPT.
+</div>
+
+</section>
+
+
+
+<!-- PRIVATE KEY -->
+
+<section class="card">
+
+<div class="step">
+6 · The private key
+</div>
+
+<p class="small">
+The private key is related to the two secret primes used to create n.
+</p>
+
+<div class="code">
+PRIVATE KEY: hidden
+</div>
+
+<button class="decrypt" onclick="decryptMsg()">
+🔓 DECRYPT
+</button> 
+</br> </br>
+<div class="code" id="plain">
+Waiting…
+</div>
+
+<p class="small" id="status">
+</p>
+
+</section>
+
+<button class="reset" onclick="location.reload()">
+↻ Generate a new RSA-2048 key pair
+</button>
+
+
+
+</div>
+</div>
+
+
+<script>
+
+let keyPair = null;
+let lastCipher = null;
+
+
+/* -------------------------------------------------
+   Convert encrypted bytes into ONE large decimal
+   number instead of Base64
+-------------------------------------------------- */
+
+function bytesToDecimal(buf){
+
+    const bytes = new Uint8Array(buf);
+
+    let hex = "";
+
+    for(const x of bytes){
+
+        hex += x
+            .toString(16)
+            .padStart(2,"0");
+
+    }
+
+    return BigInt("0x" + hex).toString(10);
+}
+
+
+/* -------------------------------------------------
+   Show the message as numbers
+-------------------------------------------------- */
+
+function updateBytes(){
+
+    const s = document.getElementById("msg").value;
+
+    const b = new TextEncoder().encode(s);
+
+    document.getElementById("bytes").textContent =
+        Array.from(b).join(" ");
+
+}
+
+
+/* -------------------------------------------------
+   Generate RSA-2048 key pair
+-------------------------------------------------- */
+
+async function init(){
+
+    keyPair = await crypto.subtle.generateKey(
+
+        {
+            name:"RSA-OAEP",
+
+            modulusLength:2048,
+
+            publicExponent:
+                new Uint8Array([1,0,1]),
+
+            hash:"SHA-256"
+        },
+
+        true,
+
+        ["encrypt","decrypt"]
+
+    );
+
+
+    /* Get the public key */
+
+    const jwk =
+        await crypto.subtle.exportKey(
+            "jwk",
+            keyPair.publicKey
+        );
+
+
+    /*
+       The modulus n comes from JWK as
+       Base64URL.
+
+       Convert it into a normal integer.
+    */
+
+    const raw =
+        atob(
+            jwk.n
+                .replace(/-/g,"+")
+                .replace(/_/g,"/")
+        );
+
+
+    let hex = "";
+
+    for(let i=0;i<raw.length;i++){
+
+        hex += raw
+            .charCodeAt(i)
+            .toString(16)
+            .padStart(2,"0");
+
+    }
+
+
+    const decimal =
+        BigInt("0x" + hex).toString(10);
+
+
+    document.getElementById("n").textContent =
+        decimal;
+
+}
+
+
+
+/* -------------------------------------------------
+   ENCRYPT
+-------------------------------------------------- */
+
+async function encryptMsg(){
+
+    updateBytes();
+
+    const text =
+        document.getElementById("msg").value;
+
+
+    try{
+
+        lastCipher =
+            await crypto.subtle.encrypt(
+
+                {
+                    name:"RSA-OAEP"
+                },
+
+                keyPair.publicKey,
+
+                new TextEncoder().encode(text)
+
+            );
+
+
+        /*
+           IMPORTANT CHANGE:
+
+           Previously this displayed Base64.
+
+           Now it displays the ciphertext
+           as a huge decimal number.
+        */
+
+        document.getElementById("cipher").textContent =
+            bytesToDecimal(lastCipher);
+
+
+        document.getElementById("plain").textContent =
+            "Encrypted. Now click DECRYPT.";
+
+
+        document.getElementById("status").textContent =
+            "The ciphertext is a huge number produced by the RSA calculation.";
+
+
+    }
+
+    catch(e){
+
+        document.getElementById("cipher").textContent =
+            "Message too long for this RSA-OAEP operation. Try a shorter message.";
+
+    }
+
+}
+
+
+
+/* -------------------------------------------------
+   DECRYPT
+-------------------------------------------------- */
+
+async function decryptMsg(){
+
+    if(!lastCipher){
+
+        document.getElementById("status").textContent =
+            "Encrypt a message first.";
+
+        return;
+
+    }
+
+
+    try{
+
+        const data =
+            await crypto.subtle.decrypt(
+
+                {
+                    name:"RSA-OAEP"
+                },
+
+                keyPair.privateKey,
+
+                lastCipher
+
+            );
+
+
+        document.getElementById("plain").textContent =
+            new TextDecoder().decode(data);
+
+
+        document.getElementById("status").innerHTML =
+            '<span class="ok">✓ Decrypted</span>';
+
+    }
+
+
+    catch(e){
+
+        document.getElementById("plain").textContent =
+            "Decryption failed.";
+
+    }
+
+}
+
+
+/* Update numbers whenever the message changes */
+
+document
+    .getElementById("msg")
+    .addEventListener(
+        "input",
+        updateBytes
+    );
+
+
+/* Start RSA */
+
+init();
+
+</script>
+
+</body>
+</html>
