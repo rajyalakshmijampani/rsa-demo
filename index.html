@@ -16,9 +16,9 @@ body{
 }
 
 .wrap{
-    max-width:1100px;
+    max-width:1300px;
     margin:22px auto;
-    padding:18px
+    padding:10px
 }
 
 h1{
@@ -210,7 +210,7 @@ A visual, classroom-friendly look at the mathematics behind public-key encryptio
 <section class="card">
 
 <div class="step">
-1 · Start with a message
+Message
 </div>
 
 <textarea id="msg">Hello</textarea>
@@ -221,6 +221,11 @@ UTF-8 byte values
 
 <div class="code" id="bytes">
 </div>
+
+
+<button class="encrypt" onclick="encryptMsg()">
+🔒 ENCRYPT
+</button>
 
 </section>
 
@@ -251,12 +256,10 @@ Generating…
 <section class="card">
 
 <div class="step">
-3 · Try it
+Cipher
 </div>
 
-<button class="encrypt" onclick="encryptMsg()">
-🔒 ENCRYPT
-</button>
+
 
 <div class="label">
 Ciphertext — a huge number
@@ -273,14 +276,6 @@ Click ENCRYPT.
 <!-- PRIVATE KEY -->
 
 <section class="card">
-
-<div class="step">
-6 · The private key
-</div>
-
-<p class="small">
-The private key is related to the two secret primes used to create n.
-</p>
 
 <div class="code">
 PRIVATE KEY: hidden
